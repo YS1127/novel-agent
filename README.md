@@ -13,11 +13,13 @@
 
 ## 启动
 
-创建 MySQL 数据库 `novel_agent`，按需设置 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD`，然后运行：
+创建 MySQL 数据库 `novel_agent`，在项目根目录的 `.env` 中填写 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD`，然后运行：
 
 ```sh
 mvn spring-boot:run
 ```
+
+`.env` 不会提交到 Git；`.env.example` 是可共享的字段模板。后端启动时从项目根目录读取 `.env` 中的 `SERVER_PORT` 和数据库配置；前端启动时读取 `FRONTEND_PORT`，并将 `/api` 代理到 `SERVER_PORT`。`DB_URL` 中的 `3306` 和 `REDIS_PORT` 也可在此修改。`REDIS_*` 和 `AI_API_KEY` 目前仅预留，尚未连接 Redis 或 AI 服务。修改 `.env` 后需重启对应服务。
 
 另开终端运行前端：
 
@@ -28,7 +30,7 @@ npm ci
 npm run dev
 ```
 
-开发服务器会将 `/api` 请求代理到 `http://localhost:8080`；可通过 `VITE_API_TARGET` 覆盖代理目标。
+开发服务器默认运行在 `5173`，并将 `/api` 请求代理到后端默认端口 `8080`。
 
 ## 验证
 

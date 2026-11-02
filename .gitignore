@@ -1,5 +1,9 @@
 .idea/
+.env
+.env.*
+!.env.example
 .worktrees/
+.superpowers/
 target/
 frontend/node_modules/
 frontend/dist/
