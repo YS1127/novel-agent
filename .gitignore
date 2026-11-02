@@ -1,0 +1,7 @@
+.idea/
+.worktrees/
+target/
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+frontend/.env.*.local
