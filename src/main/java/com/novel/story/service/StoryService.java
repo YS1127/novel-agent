@@ -59,7 +59,9 @@ public class StoryService {
         if (current.getVersion() != version) throw new StoryConflictException("作品已被修改，请刷新后重试");
         boolean changedPlan = !java.util.Objects.equals(current.getProposal(), trimNullable(proposal))
                 || !java.util.Objects.equals(current.getOutline(), trimNullable(outline));
-        String nextStage = changedPlan && "CONFIRMED".equals(current.getStage()) ? "PLAN" : current.getStage();
+        String nextStage = current.getStage();
+        if (changedPlan && ("CONFIRMED".equals(current.getStage()) || "DRAFT".equals(current.getStage()))) nextStage = "PLAN";
+        else if (body != null && !body.isBlank() && "CONFIRMED".equals(current.getStage())) nextStage = "DRAFT";
         int updated = mapper.update(null, new LambdaUpdateWrapper<Story>()
                 .eq(Story::getId, id).eq(Story::getVersion, version)
                 .set(Story::getTitle, title.trim())

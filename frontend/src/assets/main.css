@@ -74,6 +74,17 @@ button { cursor: pointer; }
 .secondary { border: 1px solid #d2ded2; border-radius: 8px; background: #f6faf5; color: #345a41; padding: 9px 14px; font-size: 13px; font-weight: 700; }
 .secondary:disabled { opacity: .5; }
 .questions { display: flex; flex-direction: column; gap: 16px; margin-top: 22px; }
+.draft-panel { max-width: 780px; margin: 24px auto; padding: 28px 32px; border: 1px solid #e1e7dc; border-radius: 14px; background: #fff; }
+.draft-panel h2 { font-family: 'Noto Serif SC', serif; font-size: 22px; margin: 0 0 12px; }
+.writing-actions { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin: 16px 0; }
+.field-label { display: block; color: #4f614f; font-size: 13px; font-weight: 700; margin: 20px 0 10px; }
+.body-editor { width: 100%; min-height: 380px; padding: 20px; border: 1px solid #dfe3d9; border-radius: 10px; resize: vertical; line-height: 1.9; outline: none; }
+.rewrite-box { padding: 18px; background: #f6f8f3; border-radius: 10px; margin-top: 24px; }
+.rewrite-box textarea { width: 100%; padding: 12px; border: 1px solid #dfe3d9; border-radius: 8px; resize: vertical; }
+.candidate-list { margin-top: 30px; }
+.candidate-list h3 { font-size: 16px; }
+.candidate { border: 1px solid #dce5d9; border-radius: 10px; padding: 20px; margin-top: 12px; }
+.candidate pre { white-space: pre-wrap; font-family: 'Noto Serif SC', serif; line-height: 1.9; max-height: 500px; overflow: auto; }
 @media (max-width: 700px) {
   .shell { flex-direction: column; }
   .sidebar { width: 100%; border-right: 0; border-bottom: 1px solid #e8e6dc; }

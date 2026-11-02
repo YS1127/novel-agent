@@ -86,7 +86,7 @@ public class AiSettingsService {
         catch (IllegalArgumentException error) { throw new IllegalArgumentException("AI 服务地址格式无效"); }
         String host = uri.getHost();
         boolean local = "localhost".equalsIgnoreCase(host) || "127.0.0.1".equals(host) || "[::1]".equals(host);
-        if (host == null || uri.getUserInfo() != null || uri.getFragment() != null
+        if (host == null || uri.getUserInfo() != null || uri.getFragment() != null || uri.getQuery() != null
                 || !("https".equalsIgnoreCase(uri.getScheme()) || (local && "http".equalsIgnoreCase(uri.getScheme())))) {
             throw new IllegalArgumentException("AI 服务地址必须使用 HTTPS，本机地址可使用 HTTP");
         }

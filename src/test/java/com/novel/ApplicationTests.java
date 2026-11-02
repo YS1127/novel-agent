@@ -5,6 +5,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import com.novel.story.mapper.StoryMapper;
 import com.novel.story.mapper.StoryQuestionMapper;
+import com.novel.story.mapper.StoryCandidateMapper;
 import com.novel.ai.mapper.AiSettingsMapper;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -16,6 +17,8 @@ class ApplicationTests {
     private StoryMapper storyMapper;
     @MockitoBean
     private StoryQuestionMapper storyQuestionMapper;
+    @MockitoBean
+    private StoryCandidateMapper storyCandidateMapper;
     @MockitoBean
     private AiSettingsMapper aiSettingsMapper;
     @MockitoBean

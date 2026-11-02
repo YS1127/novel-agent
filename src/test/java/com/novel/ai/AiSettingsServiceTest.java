@@ -38,4 +38,11 @@ class AiSettingsServiceTest {
         assertThrows(IllegalStateException.class,
                 () -> service.save("https://api.example.com/v1", "fiction-model", "sk-secret-value"));
     }
+
+    @Test
+    void rejectsBaseUrlWithQueryThatWouldMisrouteChatCompletion() {
+        AiSettingsService service = new AiSettingsService(mapper, new SecretCipher(""), "", "", "");
+        assertThrows(IllegalArgumentException.class,
+                () -> service.save("https://api.example.com/v1?token=value", "fiction-model", ""));
+    }
 }

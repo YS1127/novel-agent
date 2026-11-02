@@ -60,4 +60,5 @@ class StoryServiceTest {
         assertThrows(StoryConflictException.class,
                 () -> service.update(7L, "标题", "点子", "", "", "", "", 2));
     }
+
 }

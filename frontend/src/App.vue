@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { createStory, getStory, listStories, updateStory, type Story, type StoryChanges } from './api/stories'
 import AiSettings from './components/AiSettings.vue'
 import PlanningPanel from './components/PlanningPanel.vue'
+import DraftPanel from './components/DraftPanel.vue'
 import './assets/main.css'
 
 const stories = ref<Story[]>([])
@@ -59,13 +60,18 @@ async function create() {
     const created = await createStory({
       title: newTitle.value.trim(), idea: newIdea.value.trim(), styleGuide: newStyle.value.trim(),
     })
-    await refreshList()
     active.value = created
     draft.value = { ...created }
     newTitle.value = ''
     newIdea.value = ''
     newStyle.value = ''
     notice.value = '作品已创建'
+    try {
+      await refreshList()
+    } catch {
+      stories.value = [created, ...stories.value]
+      notice.value = '作品已创建；列表刷新失败，稍后可重试'
+    }
   } catch (cause) {
     error.value = message(cause)
   } finally {
@@ -100,6 +106,9 @@ function applyServerStory(story: Story) {
   active.value = story
   draft.value = { ...story }
   refreshList().catch(cause => { error.value = message(cause) })
+}
+function updateDraftBody(value: string) {
+  if (draft.value) draft.value.body = value
 }
 onMounted(async () => {
   window.addEventListener('beforeunload', warnBeforeLeave)
@@ -173,7 +182,10 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', warnBeforeLeave
           </template>
         </div>
         <PlanningPanel v-if="active && !dirty" :story="active" @updated="applyServerStory" />
-        <p v-else class="hint">请先保存当前修改，再继续构思。</p>
+        <DraftPanel v-if="active && (active.stage === 'CONFIRMED' || active.stage === 'DRAFT')"
+          :story="active" :blocked="dirty" @body-change="updateDraftBody"
+          @save-request="save" @updated="applyServerStory" />
+        <p v-if="dirty" class="hint">请先保存当前修改，再继续构思。</p>
       </section>
     </main>
   </div>
