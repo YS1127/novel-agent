@@ -20,7 +20,7 @@ export interface StoryPage {
 
 export type StoryChanges = Pick<Story, 'title' | 'idea' | 'styleGuide' | 'proposal' | 'outline' | 'body' | 'version'>
 
-async function request(path: string, init?: RequestInit): Promise<unknown> {
+export async function request(path: string, init?: RequestInit): Promise<unknown> {
   let response: Response
   try {
     response = await fetch(`/api${path}`, {
@@ -38,11 +38,11 @@ async function request(path: string, init?: RequestInit): Promise<unknown> {
   return data
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
-function parseStory(value: unknown): Story {
+export function parseStory(value: unknown): Story {
   if (!isRecord(value) || typeof value.id !== 'number' || value.id <= 0
     || typeof value.title !== 'string' || typeof value.idea !== 'string'
     || typeof value.version !== 'number') {

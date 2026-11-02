@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { createStory, getStory, listStories, updateStory, type Story, type StoryChanges } from './api/stories'
+import AiSettings from './components/AiSettings.vue'
+import PlanningPanel from './components/PlanningPanel.vue'
 import './assets/main.css'
 
 const stories = ref<Story[]>([])
@@ -13,6 +15,7 @@ const busy = ref(false)
 const error = ref('')
 const notice = ref('')
 const loading = ref(true)
+const showSettings = ref(false)
 const dirty = computed(() => active.value !== null && draft.value !== null &&
   JSON.stringify(changes(active.value)) !== JSON.stringify(changes(draft.value)))
 
@@ -93,6 +96,11 @@ async function save() {
 function warnBeforeLeave(event: BeforeUnloadEvent) {
   if (dirty.value) event.preventDefault()
 }
+function applyServerStory(story: Story) {
+  active.value = story
+  draft.value = { ...story }
+  refreshList().catch(cause => { error.value = message(cause) })
+}
 onMounted(async () => {
   window.addEventListener('beforeunload', warnBeforeLeave)
   try {
@@ -134,9 +142,10 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', warnBeforeLeave
     </aside>
 
     <main class="workspace">
-      <header class="topbar"><span>创作工作台</span><span class="topbar-note">从灵感到成稿，始终由你决定</span></header>
+      <header class="topbar"><span>创作工作台</span><div class="topbar-actions"><span class="topbar-note">从灵感到成稿，始终由你决定</span><button type="button" class="text-button" @click="showSettings = !showSettings">AI 设置</button></div></header>
       <div v-if="error" class="banner error" role="alert">{{ error }}</div>
       <div v-if="notice" class="banner success" role="status">{{ notice }}</div>
+      <AiSettings v-if="showSettings" @close="showSettings = false" />
       <section v-if="!draft" class="welcome">
         <div class="welcome-icon">✦</div>
         <p class="eyebrow">新的故事，从这里开始</p>
@@ -156,8 +165,15 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', warnBeforeLeave
           <textarea id="story-idea" v-model="draft.idea" name="idea" rows="6" />
           <label for="story-style">文风说明</label>
           <textarea id="story-style" v-model="draft.styleGuide" name="styleGuide" rows="3" placeholder="描述你希望呈现的语言和氛围" />
+          <template v-if="draft.proposal || draft.outline">
+            <label for="story-proposal">故事方案</label>
+            <textarea id="story-proposal" v-model="draft.proposal" name="proposal" rows="8" />
+            <label for="story-outline">故事大纲</label>
+            <textarea id="story-outline" v-model="draft.outline" name="outline" rows="10" />
+          </template>
         </div>
-        <div class="next-card"><span class="next-icon">↗</span><div><strong>下一步：构思故事</strong><p>回答几个关键问题，再一起完善故事方案和大纲。</p></div><span class="soon">即将开放</span></div>
+        <PlanningPanel v-if="active && !dirty" :story="active" @updated="applyServerStory" />
+        <p v-else class="hint">请先保存当前修改，再继续构思。</p>
       </section>
     </main>
   </div>

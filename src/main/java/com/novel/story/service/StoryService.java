@@ -57,6 +57,9 @@ public class StoryService {
         requireText(idea, "点子");
         Story current = get(id);
         if (current.getVersion() != version) throw new StoryConflictException("作品已被修改，请刷新后重试");
+        boolean changedPlan = !java.util.Objects.equals(current.getProposal(), trimNullable(proposal))
+                || !java.util.Objects.equals(current.getOutline(), trimNullable(outline));
+        String nextStage = changedPlan && "CONFIRMED".equals(current.getStage()) ? "PLAN" : current.getStage();
         int updated = mapper.update(null, new LambdaUpdateWrapper<Story>()
                 .eq(Story::getId, id).eq(Story::getVersion, version)
                 .set(Story::getTitle, title.trim())
@@ -65,6 +68,7 @@ public class StoryService {
                 .set(Story::getProposal, trimNullable(proposal))
                 .set(Story::getOutline, trimNullable(outline))
                 .set(Story::getBody, body == null ? "" : body)
+                .set(Story::getStage, nextStage)
                 .set(Story::getVersion, version + 1)
                 .set(Story::getUpdatedAt, LocalDateTime.now()));
         if (updated != 1) throw new StoryConflictException("作品已被修改，请刷新后重试");

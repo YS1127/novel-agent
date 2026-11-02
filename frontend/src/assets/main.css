@@ -35,6 +35,8 @@ button { cursor: pointer; }
 .workspace { flex: 1; min-width: 0; }
 .topbar { height: 76px; border-bottom: 1px solid #e9e8e0; display: flex; align-items: center; justify-content: space-between; padding: 0 52px; font-size: 13px; font-weight: 700; color: #456050; }
 .topbar-note { font-weight: 400; color: #9ba39b; }
+.topbar-actions { display: flex; align-items: center; gap: 24px; }
+.text-button { border: 0; background: none; color: #35624c; font-size: 13px; font-weight: 700; }
 .welcome { max-width: 820px; margin: 13vh auto 0; padding: 0 40px; }
 .welcome-icon { display: grid; place-items: center; width: 54px; height: 54px; border-radius: 16px; background: #e6eee5; color: #43684d; font-size: 30px; margin-bottom: 36px; }
 .eyebrow { letter-spacing: .16em; color: #839184; font-size: 11px; font-weight: 700; margin: 0 0 13px; }
@@ -56,6 +58,22 @@ button { cursor: pointer; }
 .banner { margin: 20px 52px 0; padding: 12px 16px; border-radius: 8px; font-size: 13px; }
 .banner.error { background: #fff0ee; color: #a34335; }
 .banner.success { background: #e6f2e7; color: #32643e; }
+.settings-panel, .planning-panel { max-width: 780px; margin: 24px auto; padding: 28px 32px; border: 1px solid #e1e7dc; border-radius: 14px; background: #fff; }
+.settings-panel { box-shadow: 0 12px 40px #243d2d14; }
+.panel-header { display: flex; align-items: center; justify-content: space-between; }
+.panel-header h2 { font-family: 'Noto Serif SC', serif; font-size: 22px; margin: 0 0 12px; }
+.hint { color: #7b897c; font-size: 12px; line-height: 1.8; }
+.settings-form, .question-item { display: flex; flex-direction: column; gap: 9px; }
+.settings-form { margin-top: 20px; }
+.settings-form label, .question-item label { color: #4f614f; font-size: 13px; font-weight: 700; }
+.settings-form input, .question-item textarea { border: 1px solid #dfe3d9; border-radius: 8px; padding: 10px 12px; outline: none; resize: vertical; }
+.settings-form .primary { align-self: flex-start; margin-top: 12px; }
+.inline-error { color: #a34335; font-size: 13px; }
+.inline-success { color: #32643e; font-size: 13px; }
+.planning-actions, .confirm-row { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
+.secondary { border: 1px solid #d2ded2; border-radius: 8px; background: #f6faf5; color: #345a41; padding: 9px 14px; font-size: 13px; font-weight: 700; }
+.secondary:disabled { opacity: .5; }
+.questions { display: flex; flex-direction: column; gap: 16px; margin-top: 22px; }
 @media (max-width: 700px) {
   .shell { flex-direction: column; }
   .sidebar { width: 100%; border-right: 0; border-bottom: 1px solid #e8e6dc; }

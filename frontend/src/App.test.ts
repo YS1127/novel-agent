@@ -37,9 +37,20 @@ describe('作品工作台', () => {
     const wrapper = mount(App)
     await flushPromises()
     await wrapper.get('[name="newIdea"]').setValue('一个点子')
-    await wrapper.get('[data-action="create"]').trigger('click')
+    await wrapper.get('form.new-story').trigger('submit')
     expect(api.createStory).not.toHaveBeenCalled()
     expect((wrapper.get('[name="newIdea"]').element as HTMLTextAreaElement).value).toBe('一个点子')
+  })
+
+  it('提交有效标题和点子后创建作品', async () => {
+    api.createStory.mockResolvedValue(story(3, '新作'))
+    const wrapper = mount(App)
+    await flushPromises()
+    await wrapper.get('[name="newTitle"]').setValue('新作')
+    await wrapper.get('[name="newIdea"]').setValue('一个点子')
+    await wrapper.get('form.new-story').trigger('submit')
+    await flushPromises()
+    expect(api.createStory).toHaveBeenCalledWith({ title: '新作', idea: '一个点子', styleGuide: '' })
   })
 
   it('保存失败时保留编辑内容', async () => {

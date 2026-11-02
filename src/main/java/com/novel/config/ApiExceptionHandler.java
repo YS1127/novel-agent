@@ -1,5 +1,6 @@
 package com.novel.config;
 
+import com.novel.ai.AiServiceException;
 import com.novel.story.StoryConflictException;
 import com.novel.story.StoryNotFoundException;
 import org.springframework.http.HttpStatus;
@@ -30,5 +31,15 @@ public class ApiExceptionHandler {
     @ExceptionHandler(StoryConflictException.class)
     public ResponseEntity<ApiError> conflict(StoryConflictException error) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiError("CONFLICT", error.getMessage()));
+    }
+
+    @ExceptionHandler(AiServiceException.class)
+    public ResponseEntity<ApiError> aiFailure(AiServiceException error) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new ApiError("AI_FAILURE", error.getMessage()));
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiError> missingConfiguration(IllegalStateException error) {
+        return ResponseEntity.badRequest().body(new ApiError("CONFIGURATION_REQUIRED", error.getMessage()));
     }
 }
