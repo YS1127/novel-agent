@@ -1,6 +1,164 @@
+<script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { createStory, getStory, listStories, updateStory, type Story, type StoryChanges } from './api/stories'
+import './assets/main.css'
+
+const stories = ref<Story[]>([])
+const active = ref<Story | null>(null)
+const draft = ref<Story | null>(null)
+const newTitle = ref('')
+const newIdea = ref('')
+const newStyle = ref('')
+const busy = ref(false)
+const error = ref('')
+const notice = ref('')
+const loading = ref(true)
+const dirty = computed(() => active.value !== null && draft.value !== null &&
+  JSON.stringify(changes(active.value)) !== JSON.stringify(changes(draft.value)))
+
+function changes(story: Story): StoryChanges {
+  return {
+    title: story.title, idea: story.idea, styleGuide: story.styleGuide,
+    proposal: story.proposal, outline: story.outline, body: story.body, version: story.version,
+  }
+}
+function message(cause: unknown): string {
+  return cause instanceof Error ? cause.message : '操作失败，请重试'
+}
+async function refreshList() {
+  stories.value = (await listStories()).items
+}
+async function selectStory(id: number) {
+  if (dirty.value && !window.confirm('当前修改尚未保存，确定切换作品吗？')) return
+  busy.value = true
+  error.value = ''
+  notice.value = ''
+  try {
+    const story = await getStory(id)
+    active.value = story
+    draft.value = { ...story }
+  } catch (cause) {
+    error.value = message(cause)
+  } finally {
+    busy.value = false
+  }
+}
+async function create() {
+  error.value = ''
+  notice.value = ''
+  if (!newTitle.value.trim() || !newIdea.value.trim()) {
+    error.value = '请填写标题和故事点子'
+    return
+  }
+  if (dirty.value && !window.confirm('当前修改尚未保存，确定新建作品吗？')) return
+  busy.value = true
+  try {
+    const created = await createStory({
+      title: newTitle.value.trim(), idea: newIdea.value.trim(), styleGuide: newStyle.value.trim(),
+    })
+    await refreshList()
+    active.value = created
+    draft.value = { ...created }
+    newTitle.value = ''
+    newIdea.value = ''
+    newStyle.value = ''
+    notice.value = '作品已创建'
+  } catch (cause) {
+    error.value = message(cause)
+  } finally {
+    busy.value = false
+  }
+}
+async function save() {
+  if (!active.value || !draft.value) return
+  error.value = ''
+  notice.value = ''
+  if (!draft.value.title.trim() || !draft.value.idea.trim()) {
+    error.value = '标题和故事点子不能为空'
+    return
+  }
+  busy.value = true
+  try {
+    const saved = await updateStory(active.value.id, changes(draft.value))
+    active.value = saved
+    draft.value = { ...saved }
+    await refreshList()
+    notice.value = '已保存'
+  } catch (cause) {
+    error.value = message(cause)
+  } finally {
+    busy.value = false
+  }
+}
+function warnBeforeLeave(event: BeforeUnloadEvent) {
+  if (dirty.value) event.preventDefault()
+}
+onMounted(async () => {
+  window.addEventListener('beforeunload', warnBeforeLeave)
+  try {
+    await refreshList()
+  } catch (cause) {
+    error.value = message(cause)
+  } finally {
+    loading.value = false
+  }
+})
+onBeforeUnmount(() => window.removeEventListener('beforeunload', warnBeforeLeave))
+</script>
+
 <template>
-  <main>
-    <h1>Novel Agent</h1>
-    <p>工程已初始化，可以开始实现业务功能。</p>
-  </main>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">✦</span><span>小说工坊</span></div>
+      <div class="sidebar-heading"><span>我的作品</span><span class="count">{{ stories.length }}</span></div>
+      <p v-if="loading" class="muted">正在加载作品…</p>
+      <p v-else-if="stories.length === 0" class="muted">还没有作品，从一个点子开始。</p>
+      <nav aria-label="作品列表" class="story-list">
+        <button v-for="story in stories" :key="story.id" type="button" class="story-item"
+          :class="{ selected: active?.id === story.id }" :data-story-id="story.id"
+          :disabled="busy" @click="selectStory(story.id)">
+          <span class="story-icon">文</span>
+          <span class="story-info"><strong>{{ story.title }}</strong><small>{{ story.idea }}</small></span>
+        </button>
+      </nav>
+      <form class="new-story" @submit.prevent="create">
+        <div class="section-label">新建作品</div>
+        <label for="new-title">标题</label>
+        <input id="new-title" v-model="newTitle" name="newTitle" maxlength="200" placeholder="给故事起个名字" />
+        <label for="new-idea">故事点子</label>
+        <textarea id="new-idea" v-model="newIdea" name="newIdea" rows="3" placeholder="一句话也可以" />
+        <label for="new-style">文风说明 <span class="optional">选填</span></label>
+        <textarea id="new-style" v-model="newStyle" name="newStyle" rows="2" placeholder="如：克制、悬疑、第一人称" />
+        <button data-action="create" class="primary full" type="submit" :disabled="busy">＋ 新建作品</button>
+      </form>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar"><span>创作工作台</span><span class="topbar-note">从灵感到成稿，始终由你决定</span></header>
+      <div v-if="error" class="banner error" role="alert">{{ error }}</div>
+      <div v-if="notice" class="banner success" role="status">{{ notice }}</div>
+      <section v-if="!draft" class="welcome">
+        <div class="welcome-icon">✦</div>
+        <p class="eyebrow">新的故事，从这里开始</p>
+        <h1>把脑海里的那一点灵光，<br />写成你的故事。</h1>
+        <p class="welcome-copy">在左侧创建作品，记录故事点子。我们会陪你一步步构思、写作与修改。</p>
+        <div class="steps"><span>01 记录灵感</span><span>02 构思大纲</span><span>03 完成正文</span></div>
+      </section>
+      <section v-else class="editor">
+        <div class="editor-top"><div><p class="eyebrow">当前作品 · {{ draft.stage }}</p><h1>{{ draft.title }}</h1></div>
+          <button data-action="save" type="button" class="primary" :disabled="busy || !dirty" @click="save">{{ busy ? '处理中…' : '保存修改' }}</button>
+        </div>
+        <p v-if="dirty" class="unsaved">有未保存的修改</p>
+        <div class="editor-card">
+          <label for="story-title">作品标题</label>
+          <input id="story-title" v-model="draft.title" name="title" maxlength="200" />
+          <label for="story-idea">故事点子</label>
+          <textarea id="story-idea" v-model="draft.idea" name="idea" rows="6" />
+          <label for="story-style">文风说明</label>
+          <textarea id="story-style" v-model="draft.styleGuide" name="styleGuide" rows="3" placeholder="描述你希望呈现的语言和氛围" />
+        </div>
+        <div class="next-card"><span class="next-icon">↗</span><div><strong>下一步：构思故事</strong><p>回答几个关键问题，再一起完善故事方案和大纲。</p></div><span class="soon">即将开放</span></div>
+      </section>
+    </main>
+  </div>
 </template>
