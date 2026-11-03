@@ -6,6 +6,9 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoInteractions;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.TransactionStatus;
 
 import com.novel.ai.AiChatClient;
 import com.novel.ai.AiContentParser;
@@ -56,5 +59,20 @@ class StoryPlanningServiceTest {
         when(ai.complete(anyString(), anyString())).thenThrow(new AiServiceException("服务不可用"));
         assertThrows(AiServiceException.class, () -> service.generatePlan(3L, 0));
         verify(storyMapper, never()).update(any(), any());
+    }
+
+    @Test
+    void cannotConfirmOldPlanAfterAnswersChanged() {
+        Story story = stories.get(3L);
+        story.setStage("QUESTIONS");
+        story.setProposal("旧方案");
+        story.setOutline("旧大纲");
+        when(transactions.execute(any())).thenAnswer(invocation -> {
+            TransactionCallback<?> callback = invocation.getArgument(0);
+            return callback.doInTransaction(Mockito.mock(TransactionStatus.class));
+        });
+
+        assertThrows(StoryConflictException.class, () -> service.confirmPlan(3L, 0));
+        verifyNoInteractions(storyMapper);
     }
 }

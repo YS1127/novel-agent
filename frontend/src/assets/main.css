@@ -13,6 +13,7 @@ button { cursor: pointer; }
 .count { font-size: 11px; background: #edf1eb; padding: 2px 7px; border-radius: 20px; }
 .muted { color: #969d94; font-size: 13px; padding: 0 7px; }
 .story-list { display: flex; flex-direction: column; gap: 5px; }
+.load-more { align-self: center; padding: 8px; }
 .story-item { display: flex; text-align: left; align-items: center; gap: 10px; width: 100%; border: 1px solid transparent; background: transparent; border-radius: 10px; padding: 10px; color: #3d443e; }
 .story-item:hover { background: #f3f5ef; }
 .story-item.selected { background: #e9f0e9; border-color: #d7e3d7; }

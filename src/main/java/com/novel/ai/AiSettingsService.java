@@ -36,6 +36,7 @@ public class AiSettingsService {
         return publicView(stored);
     }
 
+    /** 保存基础地址和模型；非空新密钥以本机主密钥加密，响应不含明文。 */
     @Transactional
     public PublicSettings save(String baseUrl, String model, String apiKey) {
         String validatedUrl = validateBaseUrl(baseUrl);
@@ -56,6 +57,7 @@ public class AiSettingsService {
         return publicView(next);
     }
 
+    /** 仅供服务端模型调用使用；页面设置接口不得返回此记录中的 apiKey。 */
     @Transactional(readOnly = true)
     public ResolvedSettings resolved() {
         AiSettings stored = mapper.selectById(1L);

@@ -19,6 +19,7 @@ public class StoryService {
         this.mapper = mapper;
     }
 
+    /** 创建作品；标题和点子不可为空，初始阶段为 IDEA。 */
     @Transactional
     public Story create(String title, String idea, String styleGuide) {
         requireText(title, "标题");
@@ -43,6 +44,7 @@ public class StoryService {
         return story;
     }
 
+    /** 按更新时间与 ID 降序分页，页码从 1 开始，单页最多 100 条。 */
     @Transactional(readOnly = true)
     public Page<Story> list(int page, int size) {
         if (page < 1 || size < 1 || size > 100) throw new IllegalArgumentException("分页参数无效");
@@ -50,6 +52,10 @@ public class StoryService {
                 .orderByDesc(Story::getUpdatedAt, Story::getId));
     }
 
+    /**
+     * 保存创作者的编辑。version 必须等于当前版本，否则抛出 StoryConflictException。
+     * 修改已确认的方案或大纲会退回 PLAN，要求再次确认。
+     */
     @Transactional
     public Story update(long id, String title, String idea, String styleGuide,
                         String proposal, String outline, String body, int version) {
@@ -61,6 +67,7 @@ public class StoryService {
                 || !java.util.Objects.equals(current.getOutline(), trimNullable(outline));
         String nextStage = current.getStage();
         if (changedPlan && ("CONFIRMED".equals(current.getStage()) || "DRAFT".equals(current.getStage()))) nextStage = "PLAN";
+        else if (changedPlan && !trimNullable(proposal).isBlank() && !trimNullable(outline).isBlank()) nextStage = "PLAN";
         else if (body != null && !body.isBlank() && "CONFIRMED".equals(current.getStage())) nextStage = "DRAFT";
         int updated = mapper.update(null, new LambdaUpdateWrapper<Story>()
                 .eq(Story::getId, id).eq(Story::getVersion, version)

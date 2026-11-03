@@ -24,3 +24,11 @@ it('生成关键问题后显示问题并通知父组件更新版本', async () =
   expect(wrapper.text()).toContain('主角是谁？')
   expect(wrapper.emitted('updated')?.[0]?.[0]).toMatchObject({ version: 1, stage: 'QUESTIONS' })
 })
+
+it('回答尚未保存时通知工作台', async () => {
+  api.listQuestions.mockResolvedValue([{ id: 10, ordinal: 1, question: '主角是谁？', answer: '' }])
+  const wrapper = mount(PlanningPanel, { props: { story } })
+  await flushPromises()
+  await wrapper.get('textarea').setValue('一位作家')
+  expect(wrapper.emitted('dirty-change')?.at(-1)?.[0]).toBe(true)
+})

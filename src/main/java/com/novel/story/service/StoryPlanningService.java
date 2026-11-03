@@ -26,7 +26,7 @@ public class StoryPlanningService {
     private final AiContentParser parser;
     private final TransactionTemplate transactions;
 
-    public record Answer(long id, String answer) {}
+    public record Answer(long id, @jakarta.validation.constraints.Size(max = 65535) String answer) {}
 
     public StoryPlanningService(StoryService stories, StoryMapper storyMapper, StoryQuestionMapper questions,
             AiChatClient ai, AiContentParser parser, TransactionTemplate transactions) {
@@ -44,6 +44,7 @@ public class StoryPlanningService {
                 .eq(StoryQuestion::getStoryId, storyId).orderByAsc(StoryQuestion::getOrdinal));
     }
 
+    /** AI 调用先于事务执行；只在解析得到有效问题后替换旧问题。 */
     public List<StoryQuestion> generateQuestions(long storyId, int version) {
         Story story = stories.get(storyId);
         ensureVersion(story, version);
@@ -70,6 +71,7 @@ public class StoryPlanningService {
         });
     }
 
+    /** 允许空回答表示跳过问题；版本冲突时事务回滚全部回答。 */
     public List<StoryQuestion> saveAnswers(long storyId, int version, List<Answer> answers) {
         if (answers == null) throw new IllegalArgumentException("回答不能为空");
         return transactions.execute(status -> {
@@ -88,6 +90,7 @@ public class StoryPlanningService {
         });
     }
 
+    /** 生成可编辑的方案与大纲，不将它们标记为已确认。 */
     public Story generatePlan(long storyId, int version) {
         Story story = stories.get(storyId);
         ensureVersion(story, version);
@@ -106,10 +109,14 @@ public class StoryPlanningService {
         });
     }
 
+    /** 仅对完整方案和大纲执行确认；正文生成接口以此阶段为门禁。 */
     public Story confirmPlan(long storyId, int version) {
         return transactions.execute(status -> {
             Story story = stories.get(storyId);
             ensureVersion(story, version);
+            if (!"PLAN".equals(story.getStage())) {
+                throw new StoryConflictException("问题或作品已变化，请先重新生成或修改方案与大纲");
+            }
             if (story.getProposal() == null || story.getProposal().isBlank()
                     || story.getOutline() == null || story.getOutline().isBlank()) {
                 throw new IllegalArgumentException("请先完善故事方案和大纲");

@@ -7,8 +7,12 @@ import DraftPanel from './components/DraftPanel.vue'
 import './assets/main.css'
 
 const stories = ref<Story[]>([])
+const totalStories = ref(0)
+const currentPage = ref(1)
+const loadingMore = ref(false)
 const active = ref<Story | null>(null)
 const draft = ref<Story | null>(null)
+const planningDirty = ref(false)
 const newTitle = ref('')
 const newIdea = ref('')
 const newStyle = ref('')
@@ -19,6 +23,8 @@ const loading = ref(true)
 const showSettings = ref(false)
 const dirty = computed(() => active.value !== null && draft.value !== null &&
   JSON.stringify(changes(active.value)) !== JSON.stringify(changes(draft.value)))
+const hasMore = computed(() => stories.value.length < totalStories.value)
+const hasUnsaved = computed(() => dirty.value || planningDirty.value)
 
 function changes(story: Story): StoryChanges {
   return {
@@ -30,10 +36,28 @@ function message(cause: unknown): string {
   return cause instanceof Error ? cause.message : '操作失败，请重试'
 }
 async function refreshList() {
-  stories.value = (await listStories()).items
+  const result = await listStories(1)
+  stories.value = result.items
+  totalStories.value = result.total
+  currentPage.value = 1
+}
+async function loadMore() {
+  loadingMore.value = true
+  error.value = ''
+  try {
+    const result = await listStories(currentPage.value + 1)
+    const seen = new Set(stories.value.map(story => story.id))
+    stories.value = [...stories.value, ...result.items.filter(story => !seen.has(story.id))]
+    currentPage.value = result.page
+    totalStories.value = result.items.length === 0 ? stories.value.length : result.total
+  } catch (cause) {
+    error.value = message(cause)
+  } finally {
+    loadingMore.value = false
+  }
 }
 async function selectStory(id: number) {
-  if (dirty.value && !window.confirm('当前修改尚未保存，确定切换作品吗？')) return
+  if (hasUnsaved.value && !window.confirm('当前修改尚未保存，确定切换作品吗？')) return
   busy.value = true
   error.value = ''
   notice.value = ''
@@ -41,6 +65,7 @@ async function selectStory(id: number) {
     const story = await getStory(id)
     active.value = story
     draft.value = { ...story }
+    planningDirty.value = false
   } catch (cause) {
     error.value = message(cause)
   } finally {
@@ -54,7 +79,7 @@ async function create() {
     error.value = '请填写标题和故事点子'
     return
   }
-  if (dirty.value && !window.confirm('当前修改尚未保存，确定新建作品吗？')) return
+  if (hasUnsaved.value && !window.confirm('当前修改尚未保存，确定新建作品吗？')) return
   busy.value = true
   try {
     const created = await createStory({
@@ -62,6 +87,7 @@ async function create() {
     })
     active.value = created
     draft.value = { ...created }
+    planningDirty.value = false
     newTitle.value = ''
     newIdea.value = ''
     newStyle.value = ''
@@ -70,6 +96,7 @@ async function create() {
       await refreshList()
     } catch {
       stories.value = [created, ...stories.value]
+      totalStories.value = Math.max(totalStories.value + 1, stories.value.length)
       notice.value = '作品已创建；列表刷新失败，稍后可重试'
     }
   } catch (cause) {
@@ -100,15 +127,29 @@ async function save() {
   }
 }
 function warnBeforeLeave(event: BeforeUnloadEvent) {
-  if (dirty.value) event.preventDefault()
+  if (hasUnsaved.value) event.preventDefault()
 }
 function applyServerStory(story: Story) {
+  // 旧作品的 AI 请求可能在切换后才完成；不能让迟到的结果替换当前作品。
+  if (active.value?.id !== story.id) return
+  const merged = { ...story }
+  const locallyEdited = dirty.value && draft.value !== null
+  if (draft.value) {
+    // AI 返回期间用户仍可编辑；仅把未修改的字段更新为服务端结果。
+    for (const field of ['title', 'idea', 'styleGuide', 'proposal', 'outline', 'body'] as const) {
+      if (draft.value[field] !== active.value[field]) merged[field] = draft.value[field]
+    }
+  }
   active.value = story
-  draft.value = { ...story }
+  draft.value = merged
+  if (locallyEdited) notice.value = 'AI 结果已返回，你未保存的修改已保留，请检查后保存'
   refreshList().catch(cause => { error.value = message(cause) })
 }
 function updateDraftBody(value: string) {
   if (draft.value) draft.value.body = value
+}
+function updatePlanningDirty(value: boolean) {
+  planningDirty.value = value
 }
 onMounted(async () => {
   window.addEventListener('beforeunload', warnBeforeLeave)
@@ -127,7 +168,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', warnBeforeLeave
   <div class="shell">
     <aside class="sidebar">
       <div class="brand"><span class="brand-mark">✦</span><span>小说工坊</span></div>
-      <div class="sidebar-heading"><span>我的作品</span><span class="count">{{ stories.length }}</span></div>
+      <div class="sidebar-heading"><span>我的作品</span><span class="count">{{ totalStories }}</span></div>
       <p v-if="loading" class="muted">正在加载作品…</p>
       <p v-else-if="stories.length === 0" class="muted">还没有作品，从一个点子开始。</p>
       <nav aria-label="作品列表" class="story-list">
@@ -138,6 +179,8 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', warnBeforeLeave
           <span class="story-info"><strong>{{ story.title }}</strong><small>{{ story.idea }}</small></span>
         </button>
       </nav>
+      <button v-if="hasMore" data-action="load-more" type="button" class="text-button load-more"
+        :disabled="loadingMore || busy" @click="loadMore">{{ loadingMore ? '加载中…' : '加载更多作品' }}</button>
       <form class="new-story" @submit.prevent="create">
         <div class="section-label">新建作品</div>
         <label for="new-title">标题</label>
@@ -181,9 +224,10 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', warnBeforeLeave
             <textarea id="story-outline" v-model="draft.outline" name="outline" rows="10" />
           </template>
         </div>
-        <PlanningPanel v-if="active && !dirty" :story="active" @updated="applyServerStory" />
+        <PlanningPanel v-if="active" :key="`plan-${active.id}`" :story="active" :blocked="dirty"
+          @dirty-change="updatePlanningDirty" @updated="applyServerStory" />
         <DraftPanel v-if="active && (active.stage === 'CONFIRMED' || active.stage === 'DRAFT')"
-          :story="active" :blocked="dirty" @body-change="updateDraftBody"
+          :key="`draft-${active.id}`" :story="active" :blocked="dirty" @body-change="updateDraftBody"
           @save-request="save" @updated="applyServerStory" />
         <p v-if="dirty" class="hint">请先保存当前修改，再继续构思。</p>
       </section>

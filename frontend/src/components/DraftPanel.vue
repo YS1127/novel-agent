@@ -44,6 +44,7 @@ function generateDraft() {
 }
 function rewrite() {
   if (props.blocked || dirty.value) { error.value = '请先保存修改，再选择片段改写'; return }
+  // textarea 偏移是 UTF-16 索引，与 Java String.substring 的索引一致。
   const start = textarea.value?.selectionStart ?? 0
   const end = textarea.value?.selectionEnd ?? 0
   const selectedText = body.value.slice(start, end)

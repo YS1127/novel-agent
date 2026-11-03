@@ -17,4 +17,10 @@ class AiContentParserTest {
     void rejectsMalformedPlan() {
         assertThrows(AiServiceException.class, () -> parser.plan("{\"proposal\":\"方案\"}"));
     }
+
+    @Test
+    void rejectsQuestionTooLongForStorage() {
+        String content = "{\"questions\":[\"" + "问".repeat(501) + "\"]}";
+        assertThrows(AiServiceException.class, () -> parser.questions(content));
+    }
 }

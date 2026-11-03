@@ -17,7 +17,9 @@ public class AiContentParser {
         if (!items.isArray() || items.isEmpty()) throw new AiServiceException("AI 未返回有效问题，请重试");
         List<String> result = new ArrayList<>();
         for (JsonNode item : items) {
-            if (!item.isTextual() || item.asText().isBlank()) throw new AiServiceException("AI 问题格式无效，请重试");
+            if (!item.isTextual() || item.asText().isBlank() || item.asText().length() > 500) {
+                throw new AiServiceException("AI 问题格式无效，请重试");
+            }
             result.add(item.asText().trim());
             if (result.size() == 3) break;
         }

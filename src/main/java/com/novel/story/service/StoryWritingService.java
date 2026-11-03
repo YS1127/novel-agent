@@ -41,6 +41,7 @@ public class StoryWritingService {
                 .orderByDesc(StoryCandidate::getCreatedAt, StoryCandidate::getId)).getRecords();
     }
 
+    /** 生成初稿候选；确认门禁与版本校验通过后才调用 AI，不修改正文。 */
     public StoryCandidate generateDraft(long storyId, int version) {
         Story story = stories.get(storyId);
         ensureVersion(story, version);
@@ -51,6 +52,7 @@ public class StoryWritingService {
         return insertCandidate(storyId, "DRAFT", story.getBody(), "", text, null, null, version);
     }
 
+    /** 使用正文 UTF-16 偏移与原片段校验选择范围，返回不自动采纳的改写候选。 */
     public StoryCandidate generateRewrite(long storyId, int version, int start, int end,
             String selectedText, String instruction) {
         Story story = stories.get(storyId);
@@ -64,6 +66,7 @@ public class StoryWritingService {
         return insertCandidate(storyId, "REWRITE", selectedText, instruction.trim(), text, start, end, version);
     }
 
+    /** 显式采纳候选；要求候选属于作品且基于当前版本，正文与候选状态同事务更新。 */
     public Story adopt(long storyId, long candidateId, int version, String expectedKind) {
         return transactions.execute(status -> {
             StoryCandidate candidate = getCandidate(storyId, candidateId);

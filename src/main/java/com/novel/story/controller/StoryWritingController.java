@@ -9,6 +9,8 @@ import com.novel.story.service.StoryWritingService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.springframework.http.ContentDisposition;
@@ -36,8 +38,9 @@ public class StoryWritingController {
     }
 
     public record VersionRequest(@NotNull Integer version) {}
-    public record RewriteRequest(@NotNull Integer version, @NotNull Integer startOffset,
-            @NotNull Integer endOffset, @NotBlank String selectedText, @NotBlank String instruction) {}
+    public record RewriteRequest(@NotNull Integer version, @NotNull @Min(0) Integer startOffset,
+            @NotNull @Min(0) Integer endOffset, @NotBlank @Size(max = 10000) String selectedText,
+            @NotBlank @Size(max = 2000) String instruction) {}
     public record CandidateResponse(Long id, String kind, String sourceText, String instruction,
             String proposedText, Integer startOffset, Integer endOffset, Integer baseVersion, String status) {
         static CandidateResponse from(StoryCandidate value) {
@@ -47,39 +50,81 @@ public class StoryWritingController {
         }
     }
 
+    /**
+     * 读取最近 20 个待审阅候选。
+     * @param storyId 作品 ID
+     * @return 属于该作品的候选；作品不存在返回 404
+     */
     @GetMapping("/candidates")
     public List<CandidateResponse> pending(@PathVariable long storyId) {
         return writing.pending(storyId).stream().map(CandidateResponse::from).toList();
     }
 
+    /**
+     * 依据已确认大纲生成初稿候选，不修改正文。
+     * @param storyId 作品 ID
+     * @param request 当前作品版本
+     * @return 待审阅初稿；未确认大纲或版本冲突返回 409
+     */
     @PostMapping("/draft-candidate")
     public CandidateResponse draft(@PathVariable long storyId, @Valid @RequestBody VersionRequest request) {
         return CandidateResponse.from(writing.generateDraft(storyId, request.version()));
     }
 
+    /**
+     * 明确采纳指定初稿候选。
+     * @param storyId 作品 ID
+     * @param candidateId 属于当前作品的初稿候选 ID
+     * @param request 候选生成时的作品版本
+     * @return 写入正文后的作品；候选过期返回 409
+     */
     @PostMapping("/adopt-draft")
     public StoryResponse adoptDraft(@PathVariable long storyId, @RequestParam long candidateId,
             @Valid @RequestBody VersionRequest request) {
         return StoryResponse.from(writing.adopt(storyId, candidateId, request.version(), "DRAFT"));
     }
 
+    /**
+     * 对当前正文的 UTF-16 偏移范围生成片段改写候选。
+     * @param storyId 作品 ID
+     * @param request 当前版本、选区、原文与改写要求
+     * @return 待审阅改写；选区不匹配返回 409
+     */
     @PostMapping("/rewrites")
     public CandidateResponse rewrite(@PathVariable long storyId, @Valid @RequestBody RewriteRequest request) {
         return CandidateResponse.from(writing.generateRewrite(storyId, request.version(),
                 request.startOffset(), request.endOffset(), request.selectedText(), request.instruction()));
     }
 
+    /**
+     * 明确采纳片段改写，正文变化后拒绝旧候选。
+     * @param storyId 作品 ID
+     * @param candidateId 属于当前作品的改写候选 ID
+     * @param request 候选生成时的作品版本
+     * @return 替换片段后的作品；冲突返回 409
+     */
     @PostMapping("/rewrites/{candidateId}/adopt")
     public StoryResponse adoptRewrite(@PathVariable long storyId, @PathVariable long candidateId,
             @Valid @RequestBody VersionRequest request) {
         return StoryResponse.from(writing.adopt(storyId, candidateId, request.version(), "REWRITE"));
     }
 
+    /**
+     * 放弃候选，保留当前正文。
+     * @param storyId 作品 ID
+     * @param candidateId 属于当前作品的候选 ID
+     */
     @DeleteMapping("/candidates/{candidateId}")
     public void dismiss(@PathVariable long storyId, @PathVariable long candidateId) {
         writing.dismiss(storyId, candidateId);
     }
 
+    /**
+     * 导出当前已保存正文。
+     * @param storyId 作品 ID
+     * @param format md 或 txt；其他格式返回 400
+     * @return 带安全文件名的下载响应
+     */
     @GetMapping("/export")
     public ResponseEntity<String> export(@PathVariable long storyId, @RequestParam String format) {
         Story story = stories.get(storyId);
